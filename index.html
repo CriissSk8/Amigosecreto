@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigo Secreto - Juego de Intercambio de Regalos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-handshake"></i> Intercambio Corporativo de Regalos</h1>
+            <p class="subtitle">Sistema profesional para la gestión de intercambios de obsequios empresariales</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="showTab('registro')">
+                <i class="fas fa-user-plus"></i> Registro
+            </button>
+            <button class="tab-btn" onclick="showTab('participantes')">
+                <i class="fas fa-users"></i> Participantes
+            </button>
+        </nav>
+
+        <!-- Sección de Registro -->
+        <div id="registro" class="tab-content active">
+            <div class="form-container">
+                <h2><i class="fas fa-user-plus"></i> Registro de Empleado</h2>
+                <form id="registroForm" class="registro-form">
+                    <div class="form-group">
+                        <label for="nombre">
+                            <i class="fas fa-user"></i> Nombre completo del empleado
+                        </label>
+                        <input type="text" id="nombre" name="nombre" required placeholder="Ingresa el nombre completo">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regalos-container">
+                            <i class="fas fa-gift"></i> Opciones de obsequios deseados
+                        </label>
+                        <div id="regalos-container">
+                            <div class="regalo-item" data-index="0">
+                                <div class="regalo-header">
+                                    <select class="prioridad-select" required>
+                                        <option value="1">Primera opción (prioridad alta)</option>
+                                        <option value="2">Segunda opción (prioridad media)</option>
+                                        <option value="3">Tercera opción (prioridad baja)</option>
+                                    </select>
+                                </div>
+                                <textarea class="regalo-descripcion" required placeholder="Describe el obsequio que te gustaría recibir..."></textarea>
+                                <div class="regalo-details">
+                                    <div class="detail-group">
+                                        <label>
+                                            <i class="fas fa-dollar-sign"></i> Valor estimado (COP)
+                                        </label>
+                                        <input type="number" class="regalo-valor" min="0" step="1000" placeholder="0">
+                                    </div>
+                                    <div class="detail-group">
+                                        <label>
+                                            <i class="fas fa-camera"></i> Imagen de referencia (opcional)
+                                        </label>
+                                        <input type="file" class="regalo-foto" accept="image/*">
+                                        <div class="preview-container" style="display: none;">
+                                            <img class="foto-preview" alt="Vista previa">
+                                            <button type="button" class="remove-photo" onclick="removePhotoRegalo(0)">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="regalos-actions">
+                            <button type="button" class="btn btn-secondary" id="agregar-regalo" onclick="agregarRegalo()">
+                                <i class="fas fa-plus"></i> Agregar opción adicional
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Registrar Empleado
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sección de Participantes -->
+        <div id="participantes" class="tab-content">
+            <div class="participantes-header">
+                <h2><i class="fas fa-users"></i> Empleados Registrados</h2>
+                <div class="stats">
+                    <span class="stat">
+                        <i class="fas fa-user"></i> 
+                        <span id="total-participantes">0</span> empleados
+                    </span>
+                </div>
+            </div>
+            
+            <div class="filtros">
+                <div class="filtro-group">
+                    <label for="ordenar">
+                        <i class="fas fa-sort"></i> Ordenar por:
+                    </label>
+                    <select id="ordenar" onchange="ordenarParticipantes()">
+                        <option value="nombre">Nombre</option>
+                        <option value="valor-asc">Valor total (menor a mayor)</option>
+                        <option value="valor-desc">Valor total (mayor a menor)</option>
+                        <option value="fecha">Fecha de registro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="lista-participantes" class="participantes-grid">
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <h3>No hay empleados registrados</h3>
+                    <p>Utiliza la pestaña "Registro" para agregar el primer empleado</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para confirmar eliminación con contraseña -->
+        <div id="modal-delete" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeDeleteModal()">&times;</span>
+                <div id="modal-delete-body">
+                    <div class="delete-confirmation">
+                        <h2><i class="fas fa-shield-alt"></i> Confirmación de Eliminación</h2>
+                        <div class="warning-box">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Esta acción eliminará permanentemente al empleado del sistema.</p>
+                        </div>
+                        <div class="employee-info" id="employee-to-delete">
+                            <!-- Se llena dinámicamente -->
+                        </div>
+                        <div class="form-group">
+                            <label for="delete-password">
+                                <i class="fas fa-lock"></i> Contraseña de administrador
+                            </label>
+                            <input type="password" id="delete-password" placeholder="Ingrese contraseña de administrador" required>
+                            <small class="password-hint">Solo el administrador puede eliminar empleados</small>
+                        </div>
+                        <div class="delete-actions">
+                            <button class="btn btn-secondary" onclick="closeDeleteModal()">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button class="btn btn-danger" onclick="confirmDelete()">
+                                <i class="fas fa-trash"></i> Eliminar Empleado
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones -->
+        <div id="notification" class="notification" style="display: none;">
+            <div class="notification-content">
+                <span id="notification-message"></span>
+                <button onclick="closeNotification()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <!-- Modal para ver detalles del participante -->
+        <div id="modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Sistema de Intercambio Corporativo - Diseñado para facilitar la gestión profesional de intercambios de obsequios</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
