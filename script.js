@@ -6,10 +6,28 @@ let employeeToDelete = null; // Para almacenar temporalmente el empleado a elimi
 // Contraseña de administrador (en un entorno real, esto estaría en el servidor)
 const ADMIN_PASSWORD = "admin2024";
 
+// Referencia a Firebase Database
+let participantesRef;
+
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
-    cargarParticipantes();
-    actualizarContadorParticipantes();
+    // Mostrar estado de conexión inicial
+    actualizarEstadoConexion('connecting');
+    
+    // Verificar si Firebase está configurado
+    if (typeof firebase !== 'undefined' && isFirebaseConfigured()) {
+        // Usar Firebase
+        participantesRef = database.ref('participantes');
+        configurarFirebaseListeners();
+        mostrarNotificacion('Conectado a la base de datos compartida', 'success');
+    } else {
+        // Fallback a localStorage si Firebase no está configurado
+        console.warn('Firebase no configurado, usando localStorage (solo local)');
+        actualizarEstadoConexion('local');
+        mostrarNotificacion('Modo local activo - otros usuarios no verán tus cambios', 'warning');
+        cargarParticipantesLocal();
+        actualizarContadorParticipantes();
+    }
     
     // Event listeners
     document.getElementById('registroForm').addEventListener('submit', registrarParticipante);
@@ -22,6 +40,80 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mostrar la primera tab
     showTab('registro');
 });
+
+// ========== FIREBASE FUNCTIONS ==========
+function configurarFirebaseListeners() {
+    // Escuchar cambios en tiempo real
+    participantesRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        participantes = data ? Object.values(data) : [];
+        actualizarContadorParticipantes();
+        
+        // Si estamos en la tab de participantes, actualizar la vista
+        if (document.getElementById('participantes').classList.contains('active')) {
+            mostrarParticipantes();
+        }
+    });
+    
+    // Actualizar indicador de estado
+    actualizarEstadoConexion('connected');
+}
+
+function actualizarEstadoConexion(estado) {
+    const statusElement = document.getElementById('connection-status');
+    const textElement = document.getElementById('status-text');
+    
+    // Limpiar clases anteriores
+    statusElement.classList.remove('connected', 'local', 'connecting');
+    
+    switch(estado) {
+        case 'connected':
+            statusElement.classList.add('connected');
+            textElement.innerHTML = '<i class="fas fa-cloud"></i> Sincronizado en la nube';
+            break;
+        case 'local':
+            statusElement.classList.add('local');
+            textElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Modo local - Solo tú ves los datos';
+            break;
+        case 'connecting':
+            statusElement.classList.add('connecting');
+            textElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+            break;
+    }
+}
+
+function guardarEnFirebase() {
+    if (participantesRef) {
+        // Convertir array a objeto con IDs como claves
+        const participantesObj = {};
+        participantes.forEach(p => {
+            participantesObj[p.id] = p;
+        });
+        
+        return participantesRef.set(participantesObj).catch(error => {
+            console.error('Error al guardar en Firebase:', error);
+            mostrarNotificacion('Error al sincronizar datos', 'error');
+        });
+    }
+}
+
+function agregarParticipanteFirebase(participante) {
+    if (participantesRef) {
+        return participantesRef.child(participante.id.toString()).set(participante).catch(error => {
+            console.error('Error al agregar participante:', error);
+            mostrarNotificacion('Error al guardar el empleado', 'error');
+        });
+    }
+}
+
+function eliminarParticipanteFirebase(id) {
+    if (participantesRef) {
+        return participantesRef.child(id.toString()).remove().catch(error => {
+            console.error('Error al eliminar participante:', error);
+            mostrarNotificacion('Error al eliminar el empleado', 'error');
+        });
+    }
+}
 
 // ========== GESTIÓN DE TABS ==========
 function showTab(tabName) {
@@ -135,7 +227,19 @@ function finalizarRegistro(participante) {
     participante.regalos.sort((a, b) => a.prioridad - b.prioridad);
     
     participantes.push(participante);
-    guardarEnLocalStorage();
+    
+    // Guardar en Firebase o localStorage según disponibilidad
+    if (participantesRef) {
+        // Firebase - se sincroniza automáticamente
+        agregarParticipanteFirebase(participante).then(() => {
+            mostrarNotificacion(`${participante.nombre} registrado exitosamente`, 'success');
+        });
+    } else {
+        // Fallback a localStorage
+        guardarEnLocalStorage();
+        actualizarContadorParticipantes();
+        mostrarNotificacion(`${participante.nombre} registrado localmente`, 'success');
+    }
     
     // Limpiar formulario
     document.getElementById('registroForm').reset();
@@ -556,12 +660,21 @@ function confirmDelete() {
     }
     
     // Eliminar el empleado
-    participantes = participantes.filter(p => p.id !== employeeToDelete.id);
-    guardarEnLocalStorage();
-    actualizarContadorParticipantes();
-    mostrarParticipantes();
-    closeDeleteModal();
-    mostrarNotificacion('Empleado eliminado del sistema', 'success');
+    if (participantesRef) {
+        // Firebase
+        eliminarParticipanteFirebase(employeeToDelete.id).then(() => {
+            closeDeleteModal();
+            mostrarNotificacion('Empleado eliminado del sistema', 'success');
+        });
+    } else {
+        // localStorage
+        participantes = participantes.filter(p => p.id !== employeeToDelete.id);
+        guardarEnLocalStorage();
+        actualizarContadorParticipantes();
+        mostrarParticipantes();
+        closeDeleteModal();
+        mostrarNotificacion('Empleado eliminado del sistema', 'success');
+    }
 }
 
 function eliminarParticipante(id) {
@@ -818,7 +931,7 @@ function enviarResultados() {
     mostrarNotificacion('Cliente de correo iniciado con el reporte', 'success');
 }
 
-// ========== ALMACENAMIENTO LOCAL ==========
+// ========== ALMACENAMIENTO LOCAL (FALLBACK) ==========
 function guardarEnLocalStorage() {
     const datos = {
         participantes,
@@ -833,7 +946,7 @@ function guardarEnLocalStorage() {
     }
 }
 
-function cargarParticipantes() {
+function cargarParticipantesLocal() {
     try {
         const datos = localStorage.getItem('amigoSecretoApp');
         if (datos) {

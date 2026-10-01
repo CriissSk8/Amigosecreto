@@ -82,7 +82,37 @@ header h1 i {
     color: var(--text-secondary);
     font-weight: 400;
     max-width: 600px;
-    margin: 0 auto;
+    margin: 0 auto 1rem auto;
+}
+
+/* Indicador de conexión */
+.connection-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+.connection-status.connected {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.connection-status.local {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
+    border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.connection-status.connecting {
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--accent-color);
+    border: 1px solid rgba(52, 152, 219, 0.3);
 }
 
 /* Navegación empresarial */

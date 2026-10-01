@@ -6,12 +6,20 @@
     <title>Amigo Secreto - Juego de Intercambio de Regalos</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1><i class="fas fa-handshake"></i> Intercambio Corporativo de Regalos</h1>
             <p class="subtitle">Sistema profesional para la gestión de intercambios de obsequios empresariales</p>
+            <div id="connection-status" class="connection-status">
+                <i class="fas fa-wifi"></i> <span id="status-text">Conectando...</span>
+            </div>
         </header>
 
         <nav class="tabs">
